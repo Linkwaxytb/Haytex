@@ -1,3 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rechercher un film par ID</title>
+</head>
+<body>
+    <h1>Rechercher un film par ID</h1>
+    <form method="post">
+        <label for="movie_id">ID du film :</label>
+        <input type="text" name="movie_id" id="movie_id" required />
+        <button type="submit">Rechercher</button>
+    </form>
+</body>
+</html>
 <?php
 if ($_SERVER['REQUEST_METHOD'] == 'POST')
 {
