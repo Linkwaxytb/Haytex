@@ -201,7 +201,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
         <div class='Top AAIco-movie_filter'>
             <div class='Title'>Vous aimerez aussi</div>
           </div>
-          <div class='MovieListTop owl-carousel Serie'>"foreach ($dataprop['results'] as $movie)
+          <div class='MovieListTop owl-carousel Serie'>"
+          foreach ($dataprop['results'] as $movie)
 		{
 			$title       = $movie['title'];
 			$poster_path = $movie['poster_path'];
@@ -2031,4 +2032,7 @@ s.src ='https://haytex.disqus.com/recommendations.js'; s.setAttribute('data-time
 		// Afficher un message de confirmation
 		echo "<p>Le film a été ajouté avec succès ! <a href='" . $filename . "'>Voir la page du film</a></p>\n";
 
-	} ?>
+	}
+}
+}
+} ?>
