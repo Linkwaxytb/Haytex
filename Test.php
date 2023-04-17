@@ -167,10 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 		}
 		$content = rtrim($content, ', ');
 		$content .= '<p class="Genre"> ';
-		foreach ($genres as $genre)
-		{
-			$content .= '<a href="http://haytex.epizy.com/cat/' . $genre['id'] . '" target="_blank">' . $genre['name'] . '</a>, ';
-		}
+
 		$content     = rtrim($content, ', ');
 		$content .= "</p>
                       <a
@@ -201,14 +198,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
         <div class='Top AAIco-movie_filter'>
             <div class='Title'>Vous aimerez aussi</div>
           </div>
-          <div class='MovieListTop owl-carousel Serie'>"
+          <div class='MovieListTop owl-carousel Serie'>";
           foreach ($dataprop['results'] as $movie)
 		{
 			$title       = $movie['title'];
 			$poster_path = $movie['poster_path'];
 			$poster_url  = 'https://image.tmdb.org/t/p/w500/' . $poster_path;
 			$movie_name  = $movie['name'];
-			$movie_url   = 'http://haytex.epizy.com/films/' . $movie_name;
+			$movie_url   = 'http://haytex.epizy.com/films/' . $movie_name;}
 
 			$content .= "<div class='TPostMv'>
               <div class='TPost B'>
@@ -2029,10 +2026,8 @@ s.src ='https://haytex.disqus.com/recommendations.js'; s.setAttribute('data-time
 		fwrite($file, $content);
 		fclose($file);
 
-		// Afficher un message de confirmation
-		echo "<p>Le film a été ajouté avec succès ! <a href='" . $filename . "'>Voir la page du film</a></p>\n";
-
+		// Rediriger l'utilisateur vers la nouvelle page HTML
+        header("Location: $filename");
+        exit;
 	}
-}
-}
-} ?>
+?>
