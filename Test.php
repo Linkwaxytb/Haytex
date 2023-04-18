@@ -2111,8 +2111,8 @@ s.src ='https://haytex.disqus.com/recommendations.js'; s.setAttribute('data-time
     $lien_page = str_replace(' ', '_', $lien_page);
 
     // Enregistrer la page HTML dans un fichier
-    $filename = '../../php/films/' . $lien_page . '.php';
-    file_put_contents($filename, $fiche);
+    $filenom = '../../php/films/' . $lien_page . '.php';
+    file_put_contents($filenom, $fiche);
     // Inclure le fichier contenant le tableau de films
     require_once('../../php/films/index.php');
 
