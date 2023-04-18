@@ -1,18 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Rechercher un film par ID</title>
-</head>
-<body>
-    <h1>Rechercher un film par ID</h1>
-    <form method="post">
-        <label for="movie_id">ID du film :</label>
-        <input type="text" name="movie_id" id="movie_id" required />
-        <button type="submit">Rechercher</button>
-    </form>
-</body>
-</html>
+
 <?php
+require '../../usersc/instructions1.php';
+require_once $abs_us_root . $us_url_root . 'users/includes/template/prep.php';
 if ($_SERVER['REQUEST_METHOD'] == 'POST')
 {
 	$movie_id    = $_POST['movie_id'];
@@ -20,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 	$api_key     = '632577cc36b03c82c4167164f4edd49f';
 	$url         = "https://api.themoviedb.org/3/movie/$movie_id?api_key=$api_key&append_to_response=credits&language=fr";
 	// URL de l'API TMDB pour récupérer les propositions
-	$prop        = 'https://api.themoviedb.org/3/movie/' . $movie_id . '/similar?api_key=' . $api_key;
+	$prop        = 'https://api.themoviedb.org/3/movie/' . $movie_id . '/similar?api_key=' . $api_key.'&language=fr';
 	$json        = file_get_contents($url);
 	// Appel de l'API pour récupérer les données JSON
 	$json_data   = file_get_contents($prop);
@@ -29,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 
 	if ($data)
 	{
-		$video_url   = "https://api.themoviedb.org/3/movie/$movie_id/videos?api_key=$api_key";
+		$video_url   = "https://api.themoviedb.org/3/movie/$movie_id/videos?api_key=$api_key&language=fr";
 		$json_video  = file_get_contents($video_url);
 		$data_video  = json_decode($json_video, true);
 		$trailer_key = '';
@@ -42,12 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 			}
 		}
 		$trailer_url   = 'https://www.youtube.com/watch?v=' . $trailer_key;
+        $release_date  = $data['release_date'];
+        $date          = date('Y', strtotime($release_date));
+        $note = $data['vote_average'];
 		$titreprinc    = $data['title'];
-		$date          = $data['release_date'];
 		$synopsis      = $data['overview'];
-		$duree         = $data['runtime'];
+        $duree         = $data['runtime'];
 		$genres        = $data['genres'];
 		$actors        = $data['credits']['cast'];
+        $crew = $data['credits']['crew'];
+        $directors = array();
 		$similar       = $data['similar']['results'];
 		$type          = $data['media_type'];
 		$backdrop_path = $data['backdrop_path'];
@@ -55,47 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 		// Obtenir les URL des images
 		$backdrop_url  = 'https://image.tmdb.org/t/p/original/' . $backdrop_path;
 		$poster_url    = 'https://image.tmdb.org/t/p/w500/' . $poster_path;
-		if (isset($_POST['titreprinc']))
-		{
-			$lien_page     = strtolower(trim($_POST['titre']));
-			$lien_page     = str_replace(array(
-				' ',
-				'_',
-				',',
-				'.',
-				';',
-				':',
-				'!',
-				'?',
-				'(',
-				')',
-				"'"
-			) , "-", $lien_page);
-			$lien_page     = str_replace(array(
-				'à',
-				'â',
-				'ä'
-			) , 'a', $lien_page);
-			$lien_page     = str_replace(array(
-				'é',
-				'è',
-				'ê',
-				'ë'
-			) , 'e', $lien_page);
-			$lien_page     = str_replace(array(
-				'î',
-				'ï'
-			) , 'i', $lien_page);
-			$lien_page     = str_replace(array(
-				'ô',
-				'ö'
-			) , 'o', $lien_page);
-			$lien_page     = str_replace(array(
-				'ù',
-				'û',
-				'ü'
-			) , 'u', $lien_page);
-		}
 		// Générer le contenu HTML de la page du film
 		$content       = "<?\n";
 		$content .= "  require '../usersc/instructions.php';\n";
@@ -148,26 +100,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
                   <div class='Info'>
                     <span class='Date'>" . $date . "</span>
                     <span class='Qlty'>HD</span>
-                    <span class='Time'>" . $duree . "</span>
+                    <span class='Time'>" . $duree . "min</span>
                     </div>
 
                   <div class='Description'>
                     <p>" . $synopsis . "</p>
-                    <p class='Director'>
-                      <span>Réalisation:</span>
+
                       <span class='tt-at'
                         >";
+        //Réalisateurs
+        foreach ($crew as $member) {
+            if ($member['job'] == 'Director') {
+                $directors[] = $member['name'];
+            }
+        }
+        if (!empty($directors)) {
+            $content .= "<p class='Director'><span>Réalisation:</span> ";
+            foreach ($directors as $director) {
+                $content .= "<a href='http://haytex.epizy.com/director/" . urlencode($director) . "' target='_blank'>" . $director . "</a>, ";
+            }
+            $content = rtrim($content, ', ');
+            $content .= "</p>";
+        }
 		//Acteurs
 		$content .= "<p class='Cast Cast-sh oh'>
-                      <span>Casting principal:</span> ";
-		foreach ($actors as $actor)
-		{
-			"
-            $content .= '<a href='http://haytex.epizy.com/cast" . $actor['id'] . " target='_blank'>" . $actor['name'] . "</a>, ";
-		}
-		$content = rtrim($content, ', ');
-		$content .= '<p class="Genre"> ';
-
+        <span>Casting principal:</span> ";
+        foreach ($actors as $actor) {
+            $content .= "<a href='http://haytex.epizy.com/casting" . $actor['id'] . "' target='_blank'>" . $actor['name'] . "</a> ";
+        }
+        $content = rtrim($content, ', ');
+        $content .= "</p>";
+		$content .= '<p class="Genre">
+                <span>Genres:</span> ';
+        foreach ($genres as $genre) {
+            $content .= '<a href="http://haytex.epizy.com/genre/'.$genre['name'].'" target="_blank">'.$genre['name'].'</a>, ';
+        }
 		$content     = rtrim($content, ', ');
 		$content .= "</p>
                       <a
@@ -199,35 +166,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
             <div class='Title'>Vous aimerez aussi</div>
           </div>
           <div class='MovieListTop owl-carousel Serie'>";
-          foreach ($dataprop['results'] as $movie)
-		{
-			$title       = $movie['title'];
-			$poster_path = $movie['poster_path'];
-			$poster_url  = 'https://image.tmdb.org/t/p/w500/' . $poster_path;
-			$movie_name  = $movie['name'];
-			$movie_url   = 'http://haytex.epizy.com/films/' . $movie_name;}
+        foreach ($dataprop['results'] as $movie)
+        {
+            $title = $movie['title'];
+            $poster_path = $movie['poster_path'];
+            $poster_url = 'https://image.tmdb.org/t/p/w500/' . $poster_path;
+            $movie_name = $movie['name'];
+            $movie_url = 'http://haytex.epizy.com/films/' . $movie_name;
 
-			$content .= "<div class='TPostMv'>
-              <div class='TPost B'>
-                <a
-                  href='http://haytex.epizy.com/films/" . $movie_url . ">";
-			$content .= "<div class='Image'>
-                    <figure class='Objf TpMvPlay AAIco-play_arro'>
-                      <img
-                        loading='lazy'
-                        class='owl-lazy'data-src='" . $poster_url . "'
-                        alt=" . $title . "
-                      /></figure>
-                    <span class='Qlty'>FILM</span>
-                  </div>
-                  <h2 class='Title'>
-                    " . $title . "
-                  </h2>
+            $content .= "
+        <div class='TPostMv'>
+            <div class='TPost B'>
+                <a href='http://haytex.epizy.com/films/" . $movie_url . "'>
+                    <div class='Image'>
+                        <figure class='Objf TpMvPlay AAIco-play_arrow'>
+                            <img loading='lazy' class='owl-lazy' data-src='" . $poster_url . "' alt='" . $title . "' />
+                        </figure>
+                        <span class='Qlty'>FILM</span>
+                    </div>
+                    <h2 class='Title'>" . $title . "</h2>
                 </a>
-              </div>
-            </div>";
-		}
-		$content .= "
+            </div>
+        </div>";
+        }
+    }
+    $content .= "
         </section>
       </div>
     </div>
@@ -2017,17 +1980,166 @@ s.src ='https://haytex.disqus.com/recommendations.js'; s.setAttribute('data-time
   <script src='https://s1.bunnycdn.ru/assets/template_1/min/all.js?6379b4a8' async=''></script>
 </body>
 ";
-		$content .= '</div>';
-		$content .= '</body>';
-		$content .= '</html>';
-		// Enregistrer le contenu HTML dans un fichier
-		$filename = "/films/" . strtolower(str_replace(" ", "-", $lien_page)) . ".php";
-		$file     = fopen($filename, 'w');
-		fwrite($file, $content);
-		fclose($file);
+    $content .= '</div>';
+    $content .= '</body>';
+    $content .= '</html>';
 
-		// Rediriger l'utilisateur vers la nouvelle page HTML
-        header("Location: $filename");
-        exit;
-	}
+    // transformer $lien_page en minuscules
+    $lien_page = strtolower($titreprinc);
+
+    // supprimer les accents et les ponctuations
+    $lien_page = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $lien_page));
+
+    // remplacer les espaces par des underscores
+    $lien_page = str_replace(' ', '_', $lien_page);
+
+    // Enregistrer la page HTML dans un fichier
+    $filename = '../../films/' . $lien_page . '.php';
+    file_put_contents($filename, $content);
+
+    // Rediriger l'utilisateur vers la nouvelle page HTML
+    header("Location: $filename");
+    exit;
+
+        $trailer_url   = 'https://www.youtube.com/watch?v=' . $trailer_key;
+        $release_date  = $data['release_date'];
+        $date          = date('Y', strtotime($release_date));
+        $note = $data['vote_average'];
+		$titreprinc    = $data['title'];
+		$synopsis      = $data['overview'];
+        $duree         = $data['runtime'];
+		$genres        = $data['genres'];
+		$actors        = $data['credits']['cast'];
+        $crew = $data['credits']['crew'];
+        $directors = array();
+		$similar       = $data['similar']['results'];
+		$type          = $data['media_type'];
+		$backdrop_path = $data['backdrop_path'];
+		$poster_path   = $data['poster_path'];
+		// Obtenir les URL des images
+		$backdrop_url  = 'https://image.tmdb.org/t/p/original/' . $backdrop_path;
+		$poster_url    = 'https://image.tmdb.org/t/p/w500/' . $poster_path;
+
+
+    $fiche=" <li>
+   <article class='post dfx fcl movies more-info'>
+   <div class='post-thumbnail or-1'>
+     <figure>
+       <img class='trs' src='". $poster_url ."' loading='lazy' alt='". $titreprinc ."'>
+     </figure>
+
+     <span class='play fa-play'></span>
+
+     <span class='quality'>HD</span>
+   </div>
+   <a href='/films/". $filename ."' class='lnk-blk'>
+     <span class='sr-only'>Regarder</span>
+   </a>
+   <div class='post info' role='tooltip'>
+     <div class='entry-header'>
+       <div class='entry-title'>". $titreprinc ."</div>
+      <div class='entry-meta'>
+        <span class='rating fa-star'><span>". $note ."/10</span></span><span class='year'>". $date ."</span><span class='duration'>". $duree ."min</span><span class='quality'>HD</span>
+      </div>
+    </div>
+    <div class='entry-content'>
+      <p>
+       ". $synopsis ."
+      </p>
+    </div>
+    <div class='details-lst'>
+      <p class='rw sm'>
+                      <span>Réalisation:</span>";
+    foreach ($directors as $director) {
+        $fiche .= '<span class="tt-at"><a href="http://haytex.epizy.com/director/' . urlencode($director) . '" target="_blank">' . $director . '</a>, </span>';
+    }
+    $fiche.=" </p>
+                    <p class='rw sm'>
+                      <span>Genre:</span>";
+    foreach ($genres as $genre) {
+        $fiche .= '<a href="http://haytex.epizy.com/genre/'.$genre['name'].'" target="_blank">'.$genre['name'].'</a>, ';
+    }
+    $fiche .= "</p>
+                    <p class='rw sm'>
+                      <span>Casting principal:</span>";
+    $count = 0;
+    foreach ($actors as $actor) {
+        if ($count >= 3) {
+            break;
+        }
+        $fiche .= "<a href='http://haytex.epizy.com/casting" . $actor['id'] . "' target='_blank'>" . $actor['name'] . "</a> ";
+        $count++;
+    }
+    if (count($actors) > 3) {
+        $fiche .= "...";
+    };
+    $fiche .= "</p>
+                  </div>
+    <div class='rw sm'>
+      <bouton class='fg1'>
+        <a href='/films/". $filename ."' class='btn blk watch-btn sm fa-play-circle'>Regarder le film</a>
+      </bouton>
+    </div>
+    <div class='post-thumbnail'>
+      <figure>
+        <img class='trs' src='". $poster_url ."' loading='lazy' alt='". $movie_name ."'>
+      </figure>
+    </div>
+  </div>
+</article>
+</li>";
+
+    $movie_id    = $_POST['movie_id'];
+	$uqload      = $_POST['uqload'];
+	$api_key     = '632577cc36b03c82c4167164f4edd49f';
+	$url         = "https://api.themoviedb.org/3/movie/$movie_id?api_key=$api_key&append_to_response=credits&language=fr";
+	// URL de l'API TMDB pour récupérer les propositions
+	$prop        = 'https://api.themoviedb.org/3/movie/' . $movie_id . '/similar?api_key=' . $api_key.'&language=fr';
+	$json        = file_get_contents($url);
+	// Appel de l'API pour récupérer les données JSON
+	$json_data   = file_get_contents($prop);
+	$data        = json_decode($json, true);
+	$dataprop    = json_decode($json_data, true);
+
+// transformer $lien_page en minuscules
+    $lien_page = strtolower($titreprinc);
+
+    // supprimer les accents et les ponctuations
+    $lien_page = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $lien_page));
+
+    // remplacer les espaces par des underscores
+    $lien_page = str_replace(' ', '_', $lien_page);
+
+    // Enregistrer la page HTML dans un fichier
+    $filename = '../../php/films/' . $lien_page . '.php';
+    file_put_contents($filename, $fiche);
+    // Inclure le fichier contenant le tableau de films
+    require_once('../../php/films/index.php');
+
+        // Ajouter le nouveau film au tableau de films
+        array_push($films, $fiche . ".php");
+
+        // Trier le tableau de films
+        asort($films);
+
+        // Réécrire le fichier contenant le tableau de films avec les nouvelles données
+        file_put_contents('../../php/films/index.php', '<?php $films = ' . var_export($films, true) . ';');
+}
 ?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rechercher un film par ID</title>
+</head>
+<body>
+    <h1>Rechercher un film par ID</h1>
+    <form method="post">
+        <label for="movie_id">ID du film :</label>
+        <input type="text" name="movie_id" id="movie_id" required />
+        <label for="uqload">Lien uqload :</label>
+        <input type="text" name="uqload" id="uqload" required />
+        <button type="submit">Ajouter</button>
+    </form>
+</body>
+</html>
