@@ -1,26 +1,126 @@
-
 <?php
-require '../../usersc/instructions1.php';
-require_once $abs_us_root . $us_url_root . 'users/includes/template/prep.php';
-if ($_SERVER['REQUEST_METHOD'] == 'POST')
-{
-	$movie_id    = $_POST['movie_id'];
-	$uqload      = $_POST['uqload'];
-	$api_key     = '632577cc36b03c82c4167164f4edd49f';
-	$url         = "https://api.themoviedb.org/3/movie/$movie_id?api_key=$api_key&append_to_response=credits&language=fr";
-	// URL de l'API TMDB pour récupérer les propositions
-	$prop        = 'https://api.themoviedb.org/3/movie/' . $movie_id . '/similar?api_key=' . $api_key.'&language=fr';
-	$json        = file_get_contents($url);
-	// Appel de l'API pour récupérer les données JSON
-	$json_data   = file_get_contents($prop);
-	$data        = json_decode($json, true);
-	$dataprop    = json_decode($json_data, true);
+// This is a user-facing page
+/*
+UserSpice 5
+An Open Source PHP User Management System
+by the UserSpice Team at http://UserSpice.com
 
-	if ($data)
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+require_once '../../users/init.php';
+if (!securePage($_SERVER['PHP_SELF'])) {
+    die();
+}
+$hooks = getMyHooks();
+includeHook($hooks, 'pre');
+
+if (!empty($_POST['uncloak'])) {
+    logger($user->data()->id, 'Cloaking', 'Attempting Uncloak');
+    if (isset($_SESSION['cloak_to'])) {
+        $to = $_SESSION['cloak_to'];
+        $from = $_SESSION['cloak_from'];
+        unset($_SESSION['cloak_to']);
+        $_SESSION[Config::get('session/session_name')] = $_SESSION['cloak_from'];
+        unset($_SESSION['cloak_from']);
+        logger($from, 'Cloaking', 'uncloaked from '.$to);
+        $cloakHook =  getMyHooks(['page'=>'cloakEnd']);
+        includeHook($cloakHook,'body');
+        usSuccess("You are now you");
+        Redirect::to($us_url_root.'users/admin.php?view=users');
+    } else {
+        usError("Something went wrong. Please login again");
+        Redirect::to($us_url_root.'users/logout.php');
+    }
+}
+
+//dealing with if the user is logged in
+if ($user->isLoggedIn() || !$user->isLoggedIn() && !hasPerm(2)) {
+    if (($settings->site_offline == 1) && (!in_array($user->data()->id, $master_account)) && ($currentPage != 'login.php') && ($currentPage != 'maintenance.php')) {
+        $user->logout();
+        logger($user->data()->id, 'Errors', 'Sending to Maint');
+        Redirect::to($us_url_root.'users/maintenance.php');
+    }
+}
+$grav = fetchProfilePicture($user->data()->id);
+$get_info_id = $user->data()->id;
+// $groupname = ucfirst($loggedInUser->title);
+$raw = date_parse($user->data()->join_date);
+$signupdate = $raw['month'].'/'.$raw['day'].'/'.$raw['year'];
+$userdetails = fetchUserDetails(null, null, $get_info_id); //Fetch user details
+if($user->isLoggedIn()) { $thisUserID = $user->data()->id;} else { $thisUserID = 0; }
+if(!isset($_GET['id'])){
+	$userID = $user->data()->id;
+}else{
+	$userID = Input::get('id');
+}
+
+if(isset($userID))
 	{
-		$video_url   = "https://api.themoviedb.org/3/movie/$movie_id/videos?api_key=$api_key&language=fr";
+	$userQ = $db->query("SELECT * FROM profiles LEFT JOIN users ON user_id = users.id WHERE user_id = ?",array($userID));
+	$thatUser = $userQ->first();
+
+	if($thisUserID == $userID)
+		{
+		$editbio = ' <small><a href="edit_profile.php">Edit Bio</a></small>';
+		}
+	else
+		{
+		$editbio = '';
+		}
+
+	$ususername = ucfirst($thatUser->username);
+	$usbio = html_entity_decode($thatUser->bio);
+	}
+else
+	{
+	$ususername = '404';
+	$usbio = 'User not found';
+	$useravatar = '';
+	$editbio = ' <small><a href="/">Go to the homepage</a></small>';
+	}
+?>
+<?php
+    if (isset($_POST['series_id']) && isset($_POST['season_number'])) {
+        $series_id = $_POST['series_id'];
+        $season_number = $_POST['season_number'];
+        $api_key     = '632577cc36b03c82c4167164f4edd49f';
+        $url_princ   = "https://api.themoviedb.org/3/tv/$series_id?api_key=$api_key&append_to_response=credits&language=fr";
+        $url         = "https://api.themoviedb.org/3/tv/$series_id/season/$season_number?api_key=$api_key&language=fr";
+        $json_princ  = file_get_contents($url_princ);
+        $json        = file_get_contents($url);
+        $data        = json_decode($json, true);
+        $serie_data  = json_decode($json_princ, true);
+        
+       
+
+        $serie_name  = $serie_data['name']; // récupérer le nom de la série
+        $serie_overview = $serie_data['overview']; // synopsis de la série
+        $serie_total_episodes = $serie_data['number_of_episodes']; // nombre total d'épisodes
+        $serie_total_seasons = $serie_data['number_of_seasons']; // nombre total de saisons
+        $serie_poster_path = $serie_data['poster_path']; // image de présentation de la série
+        $serie_backdrop_path = $serie_data['backdrop_path']; // image de fond de la série
+        $prop        = 'https://api.themoviedb.org/3/tv/' . $movie_id . '/similar?api_key=' . $api_key.'&language=fr';
+        $note        = $serie_data['vote_average'];
+        $genres        = $serie_data['genres'];
+		$actors        = $serie_data['credits']['cast'];
+        $crew = $serie_data['credits']['crew'];
+        $directors = array();
+        		$video_url   = "https://api.themoviedb.org/3/tv/$serie_id/videos?api_key=$api_key&language=fr";
+        $json_data   = file_get_contents($prop);
 		$json_video  = file_get_contents($video_url);
 		$data_video  = json_decode($json_video, true);
+        $dataprop    = json_decode($json_data, true);
 		$trailer_key = '';
 		foreach ($data_video['results'] as $result)
 		{
@@ -30,171 +130,341 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 				break;
 			}
 		}
+         // transformer $lien_page en minuscules
+    $lien_page = strtolower($serie_name);
+
+    // supprimer les accents et les ponctuations
+    $lien_page = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $lien_page));
+
+    // remplacer les espaces par des underscores
+    $lien_page = str_replace(' ', '_', $lien_page);
 		$trailer_url   = 'https://www.youtube.com/watch?v=' . $trailer_key;
         $release_date  = $data['release_date'];
         $date          = date('Y', strtotime($release_date));
-        $note = $data['vote_average'];
-		$titreprinc    = $data['title'];
-		$synopsis      = $data['overview'];
-        $duree         = $data['runtime'];
-		$genres        = $data['genres'];
-		$actors        = $data['credits']['cast'];
-        $crew = $data['credits']['crew'];
-        $directors = array();
-		$similar       = $data['similar']['results'];
-		$type          = $data['media_type'];
-		$backdrop_path = $data['backdrop_path'];
-		$poster_path   = $data['poster_path'];
-		// Obtenir les URL des images
-		$backdrop_url  = 'https://image.tmdb.org/t/p/original/' . $backdrop_path;
-		$poster_url    = 'https://image.tmdb.org/t/p/w500/' . $poster_path;
-		// Générer le contenu HTML de la page du film
-		$content       = "<?\n";
-		$content .= "  require '../usersc/instructions.php';\n";
-		$content .= "?>\n";
-		$content .= "<html lang='en-FR'>
-<head>
-  <meta charset='utf-8' />\n";
-		$content .= "<title>" . $titreprinc . " sur Haytex</title>\n";
-		$content .= "<link
-    rel='icon'
-    href='http://haytex.epizy.com/img/Haytex_logo.png'
-  />
-</head>\n";
-		$content .= "<body id='Tf-Wp' class='home blog wp-custom-logo BdGradient aa-prefix-allmo-'>
-<?php include('../php/template/menu.php')?>
 
-    <div class='Body'>
-      <div class='TPost A D'>
-        <div class='Container'>
+        // construction de l'URL de l'image de présentation et de l'image de fond
+        $serie_poster_url = 'https://image.tmdb.org/t/p/w500' . $serie_poster_path;
+        $serie_backdrop_url = 'https://image.tmdb.org/t/p/w1280' . $serie_backdrop_path;
+        $season_number = $_POST['season_number'];
+        $liste = "<section>
+<div class='Top AAIco-list'>
+<div class='Title'>Sélection épisode</div></br></br>
+
+<div class='seasons aa-crd' x-data='{ tab: 0 }'><div class='seasons-bx' @click='tab = 0'><div :class='{ 'seasons-tt aa-crd-lnk': true, 'on': tab == 0 }' x-clock='' class='seasons-tt aa-crd-lnk on'><figure><img src='$serie_poster_url' loading='lazy' alt='$serie_name Saison    d $season_number'></figure><div><p>Saison <span>$season_number</span> <i class='fa-chevron-down'></i></p><span class='date'>13 Episodes </span></div></div>
+
+<ul class='seasons-lst anm-a'>
+";
+
+        if (isset($data['episodes'])) {
+            $links = array(); // tableau associatif pour stocker les liens pour chaque épisode
+
+            // afficher un formulaire pour chaque épisode
+            echo '<form method="post">';
+            foreach ($data['episodes'] as $index => $episode) {
+    $episode_number = $episode['episode_number'];
+    $episode_name   = $episode['name']; 
+    $image_url      = "https://image.tmdb.org/t/p/w500" . $episode["still_path"];
+
+    // Récupérer la date de l'épisode et la formater
+    $air_date = $episode['air_date'];
+    $formatted_date = date('j M. Y', strtotime($air_date));
+            $liste .="<li><div><div><figure class='fa-play-circle'><img class='brd1 poa' src='$image_url' loading='lazy' alt='Episode $episode_number'></figure><h3 class='title'><span>S$season_number-E$episode_number</span> $episode_name - VF</h3></div><div><span class='date'>$formatted_date</span><a href='http://haytex.epizy.com/series/$lien_page/". $season_number ."x". $episode_number ."vf' class='btn sm rnd'>Regarder l'épisode</a></div></div></li>";
+                
+
+                echo "<h2>Episode $episode_number: $episode_name</h2>";
+                echo '<label for="link_' . $episode_number . '">Lien uqload pour cet épisode :</label>';
+                echo '<input type="text" name="links[' . $episode_number . ']" id="link_' . $episode_number . '" placeholder="Entrez le lien uqload pour cet épisode" required/>';
+
+                $links = $_POST['links'];
+                foreach ($links as $episode_number => $link) {
+$test = "
+<html lang=\"en-FR\"><head>
+  <meta charset=\"utf-8\">
+  <title>$serie_name EP$episode_number S$season_number sur Haytex</title>
+  <script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/jquery.js\" id=\"funciones_public_jquery-js\"></script>
+  <script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/owl.carousel.min.js\" id=\"funciones_public_carousel-js\"></script>
+  <script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/sol.js\"></script>
+  <script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/fonction.js\"></script>
+  <link rel=\"stylesheet\" href=\"http://haytex.epizy.com/css/style.css\">
+  <link rel=\"icon\" href=\"http://haytex.epizy.com/img/Haytex_logo.png\">
+  <link rel=\"stylesheet\" id=\"TOROFLIX_Theme-css\" href=\"http://haytex.epizy.com/css/public.css?ver=1.2.0\" type=\"text/css\" media=\"all\">
+  <script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/jquery.min.js?ver=3.6.1\" id=\"jquery-core-js\"></script>
+  <script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/script.js\" id=\"jquery-core-js\"></script>
+  <link rel=\"stylesheet\" href=\"http://haytex.epizy.com/css/style1.css?ver=8.4\">
+  <link rel=\"stylesheet\" id=\"pub.min.css-css\" href=\"http://haytex.epizy.com/css/Test.css?ver=1647590673\" type=\"text/css\" media=\"all\">
+ <link rel=\"stylesheet\" href=\"https://allmoviesforyou.net/wp-content/themes/toroflix/public/css/toroflix-public.css?ver=1.2.0\" type=\"text/css\" media=\"all\">
+  <script type=\"text/javascript\">
+    /* <![CDATA[ */
+    var toroflixPublic = {};
+    /* ]]> */
+  </script>
+  <script>
+    (function() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://haytex.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+    })();
+</script>
+<script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/jquery.js\" id=\"funciones_public_jquery-js\"></script>
+  <script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/owl.carousel.min.js\" id=\"funciones_public_carousel-js\"></script>
+  <script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/sol.js\"></script>
+  <script type=\"text/javascript\" src=\"http://haytex.epizy.com/js/fonction.js\"></script>
+</head>
 
 
 
-          <div class='VideoPlayer'>
-            <div id='VideoOption01' class='Video on' >
-            <iframe width='560' height='400' src='" . $uqload . "' frameborder='0' allowfullscreen='' style='border-radius:10px'></iframe>
+
+<body id=\"Tf-Wp\" class=\"home blog wp-custom-logo BdGradient aa-prefix-allmo-\">
+  <?php include('../../php/template/menu.php')?>
+    
+    <div class=\"Body\">
+<div class=\"TPost A D\">
+<div class=\"Container\">
+<div class=\"VideoPlayer\">
+<div id=\"VideoOption01\" class=\"Video on\">
+<iframe src=\"https://uqload.co/embed-y2x1vp1v2yxm.html\" allowfullscreen frameborder=\"0\" ></iframe>
+</div>
+<div class=\"navepi tagcloud\">
+<a href=\"#r\" class=\"prev off\"><span>Episode précédent </span></a>
+<a href=\"http://haytex.epizy.com/series/the-last-of-us/\" class=\"list prev\"><span>Episodes</span></a>
+<a href=\"http://haytex.epizy.com/series/the-last-of-us/1x2vf\" class=\"next\"> <span>Episode suivant</span> </a>
+</div> </div>
+<div class=\"Image\">
+<figure class=\"Objf\"><img src=\"https://m.media-amazon.com/images/M/MV5BMzViMDY5YTUtM2ZhYS00MWQxLWIyZTctMzc3ZjZlMTM3MzUwXkEyXkFqcGdeQXVyMTUzMTg2ODkz._V1_FMjpg_UX1280_.jpg\" alt=\"Background\"></figure>
+</div>
+</div>
+</div> <div class=\"Body\"><div class=\"Main Container\"> <div class=\"TpRwCont \"> <main> <article class=\"TPost A\">
+<header class=\"Container\">
+<div class=\"TPMvCn\">
+<h1 class=\"Title\" style=\"color:white\">The Last of Us EP01 S01 VF</h1>
+<div class=\"Info\">
+<span class=\"Date\">2022</span> <span class=\"Time\">Durée: 53 min</span> <a href=\"http://haytex.epizy.com/series/the-last-of-us/\">Tous les épisodes</a>
+</div>
+<div class=\"Description\">
+<span>Réalisation:</span
+        ><span
+          ><a class=\"por z3\" href=\"/realisateurs/craig-mazin\"
+            >Craig Mazin</a
+          ></span
+        >
+<p class=\"Cast\">
+<span>Casting principal:</span> 
+<a href=\"/cast/pedro-pascal\">Pedro Pascal</a>
+<span class=\"dot-sh\">,</span> 
+<a href=\"/cast/bella-ramsey\">Bella Ramsey</a>
+<span class=\"dot-sh\">,</span> 
+<a href=\"/cast/gabriel-luna/\">Gabriel Luna</a>
+<span class=\"dot-sh\">,</span> 
+<a href=\"/cast/jeffrey-pierce\">Jeffrey Pierce</a>...</p>
+
+<p class=\"Genre\"><span>Genre:</span> <a href=\"/cat/action\">Action</a>,
+          <a href=\"/cat/aventure\">Aventure</a>,
+          <a href=\"/cat/drame\">Drame</a></span
+        ></p></div>
+</div>
+</header>
+</article>
+
+<!--<épisodes>-->
+<?php include(\"../../php/series/episodes/the-last-of-us-1.php\")?>
+<!--<fin épisodes>-->
+<section>
+              <div class=\"Top AAIco-chat\">
+                <div class=\"Title\">Commentaires</div>
+              </div>
+              <div class=\"Comment Wrt\">
+                
+                <div id=\"disqus_thread\"></div>
+
+              </div>
+            </section>
+</main>  
+
+<!--<sidebar>-->
+<?php include(\"../../php/template/side.php\")?>
+<!--<fin sidebar>-->
+";
+               
+                
+                
+
+// créer une nouvelle page pour chaque épisode
+    $filename = 'episode_' . $episode_number . '.html';
+    $handle   = fopen($filename, 'w');
+    fwrite($handle, $test);
+    };
+
+$liste .="</ul></div></section>";
+// créer une nouvelle page pour chaque épisode
+                $filenom =  $lien_page. "-". $season_number .'.php';
+                $handle   = fopen($filenom, 'w');
+                fwrite($handle, $liste);
+
+                // fermer le fichier
+                fclose($handle);
 
 
-            </div>
 
-          </div>
-          <div class='Image'>
-            <figure class='Objf'>
-              <img
-                loading='lazy'
-                class='TPostBg'
-                src='" . $backdrop_url . "'
-                alt='Background'
-              />
-            </figure>
-          </div>
-        </div>
-      </div>";
-		$content .= "<div class='Main Container'>
-        <div class='TpRwCont'>
-          <main>
-            <article class='TPost A'>
-              <header class='Container'>
-                <div class='TPMvCn'>
-                  <h1 class='Title'>" . $titreprinc . "</h1>
-                  <div class='Info'>
-                    <span class='Date'>" . $date . "</span>
-                    <span class='Qlty'>HD</span>
-                    <span class='Time'>" . $duree . "min</span>
-                    </div>
 
-                  <div class='Description'>
-                    <p>" . $synopsis . "</p>
 
-                      <span class='tt-at'
-                        >";
-        //Réalisateurs
+
+
+
+            $page_princ = "
+                
+<html lang='en-FR'><head>
+  <meta charset='utf-8'>
+  <title>$serie_name sélection épisode sur Haytex</title>
+  <script type='text/javascript' src='http://haytex.epizy.com/js/jquery.js' id='funciones_public_jquery-js'></script>
+  <script type='text/javascript' src='http://haytex.epizy.com/js/owl.carousel.min.js' id='funciones_public_carousel-js'></script>
+  <script type='text/javascript' src='http://haytex.epizy.com/js/sol.js'></script>
+  <script type='text/javascript' src='http://haytex.epizy.com/js/fonction.js'></script>
+  <link rel='stylesheet' href='http://haytex.epizy.com/css/style.css'>
+  <link rel='icon' href='http://haytex.epizy.com/img/Haytex_logo.png'>
+  <link rel='stylesheet' id='TOROFLIX_Theme-css' href='http://haytex.epizy.com/css/public.css?ver=1.2.0' type='text/css' media='all'>
+  <script type='text/javascript' src='http://haytex.epizy.com/js/jquery.min.js?ver=3.6.1' id='jquery-core-js'></script>
+  <script type='text/javascript' src='http://haytex.epizy.com/js/script.js' id='jquery-core-js'></script>
+  <link rel='stylesheet' href='http://haytex.epizy.com/css/style1.css?ver=8.4'>
+  <link rel='stylesheet' id='pub.min.css-css' href='http://haytex.epizy.com/css/Test.css?ver=1647590673' type='text/css' media='all'>
+ <link rel='stylesheet' href='https://allmoviesforyou.net/wp-content/themes/toroflix/public/css/toroflix-public.css?ver=1.2.0' type='text/css' media='all'>
+  <script type='text/javascript'>
+    /* <![CDATA[ */
+    var toroflixPublic = {};
+    /* ]]> */
+  </script>
+  <script>
+    (function() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://haytex.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+    })();
+</script>
+<script type='text/javascript' src='http://haytex.epizy.com/js/jquery.js' id='funciones_public_jquery-js'></script>
+  <script type='text/javascript' src='http://haytex.epizy.com/js/owl.carousel.min.js' id='funciones_public_carousel-js'></script>
+  <script type='text/javascript' src='http://haytex.epizy.com/js/sol.js'></script>
+  <script type='text/javascript' src='http://haytex.epizy.com/js/fonction.js'></script>
+</head>
+
+
+
+
+
+
+<body id='Tf-Wp' class='home blog wp-custom-logo BdGradient aa-prefix-allmo-'>
+<!--<Menu>-->
+  <?php include('../../php/template/menu.php')?>
+<!--<Fin Menu>-->
+
+<div class='Body'>
+<div class='MovieListSldCn'>
+<article class='TPost A'>
+<header class='Container'>
+<div class='TPMvCn'>
+<h1 class='Title'>$serie_name</h1>
+<p class='SubTitle'><span>$serie_total_seasons</span> Saison(s) - <span>$serie_total_episodes</span> Episodes</p>
+<div class='entry-meta'>
+<span class='rating fa-star'><span>$note/10</span></span><span class='year'>2023</span></div>
+<div class='Description'>
+<p>$serie_overview</p>";
+
+
+//Réalisateurs
         foreach ($crew as $member) {
             if ($member['job'] == 'Director') {
                 $directors[] = $member['name'];
             }
         }
         if (!empty($directors)) {
-            $content .= "<p class='Director'><span>Réalisation:</span> ";
+            $page_princ .= "<p class='Director'><span>Réalisation:</span> ";
             foreach ($directors as $director) {
-                $content .= "<a href='http://haytex.epizy.com/director/" . urlencode($director) . "' target='_blank'>" . $director . "</a>, ";
+                $page_princ .= "<a href='http://haytex.epizy.com/director/" . urlencode($director) . "' target='_blank'>" . $director . "</a>, ";
             }
-            $content = rtrim($content, ', ');
-            $content .= "</p>";
+            $page_princ = rtrim($page_princ, ', ');
+            $page_princ .= "</p>";
         }
 		//Acteurs
-		$content .= "<p class='Cast Cast-sh oh'>
+		$page_princ .= "<p class='Cast Cast-sh oh'>
         <span>Casting principal:</span> ";
         foreach ($actors as $actor) {
-            $content .= "<a href='http://haytex.epizy.com/casting" . $actor['id'] . "' target='_blank'>" . $actor['name'] . "</a> ";
+            $page_princ .= "<a href='http://haytex.epizy.com/casting/" . $actor['id'] . "' target='_blank'>" . $actor['name'] . "</a> ";
         }
-        $content = rtrim($content, ', ');
-        $content .= "</p>";
-		$content .= '<p class="Genre">
+        $page_princ = rtrim($page_princ, ', ');
+        $page_princ .= "</p>";
+		$page_princ .= '<p class="Genre">
                 <span>Genres:</span> ';
         foreach ($genres as $genre) {
-            $content .= '<a href="http://haytex.epizy.com/genre/'.$genre['name'].'" target="_blank">'.$genre['name'].'</a>, ';
+            $page_princ .= '<a href="http://haytex.epizy.com/genre/'.$genre['name'].'" target="_blank">'.$genre['name'].'</a>, ';
         }
-		$content     = rtrim($content, ', ');
-		$content .= "</p>
-                      <a
-                        href='" . $trailer_url . "'
-                        target='_blank'
-                        class='Button TPlay AAIco-play_circle_outline'
-                      ><strong>Bande-Annonce</strong></a
-                  >
-                </div>
-              </header>
-            </article>
+		$page_princ     = rtrim($page_princ, ', ');
+        $page_princ .= "</p>";
 
-            <section>
-              <div class='Top AAIco-chat'>
-                <div class='Title'>Commentaires</div>
-              </div>
-              <div class='Comment Wrt'>
+$page_princ .="<a href='javascript:void(0)' onclick='window.open ('$trailer_url', 'Youtube', 'toolbar=0, status=0, width=650, height=450');' id='watch-trailer' class='Button TPlay AAIco-play_circle_outline'><strong>Bande-Annonce</strong></a>
+</div>
+<div class='Image'>
+<figure class='Objf'><img loading='lazy' class='TPostBg' src='$serie_backdrop_url' alt='Background'></figure>
+</div>
+</header>
+</article>
+</div>
+<div class='Body'>
+<div class='Main Container'>
+ <div class='TpRwCont '>
 
-                <div id=disqus_thread'></div>
+<!--<épisodes>-->
+<?php include('$lien_page-$season_number.php')?>
+<!--<fin épisodes>-->
 
-              </div>
-            </section>
-          </main>
-          <!--<sidebar>-->
+<section>
+<div class='Top AAIco-chat'>
+<div class='Title'>Commentaires</div>
+</div>
+<div class='Comment Wrt'>
+<div id='disqus_thread'><iframe id='dsq-app8598' name='dsq-app8598' allowtransparency='true' frameborder='0' scrolling='no' tabindex='0' title='Disqus' width='100%' src='https://disqus.com/embed/comments/?base=default&amp;f=haytex&amp;t_u=http%3A%2F%2Fhaytex.epizy.com%2Ffilms%2Fklaus&amp;t_d=Regarder%20Klaus%20sur%20Haytex&amp;t_t=Regarder%20Klaus%20sur%20Haytex&amp;s_o=desc#version=1b064540b1d3262ce7bcdf11f9ce2e17' style='width: 1px !important; min-width: 100% !important; border: none !important; overflow: hidden !important; height: 649px !important;' horizontalscrolling='no' verticalscrolling='no'></iframe></div>
+</div>
+</section>
+</main>
+ <!--<sidebar>-->
           <aside>
-        <?php include('../php/template/side.php')?>
+
+           <?php include('../../php/template/side.php')?>
         <section>
         <div class='Top AAIco-movie_filter'>
             <div class='Title'>Vous aimerez aussi</div>
           </div>
-          <div class='MovieListTop owl-carousel Serie'>";
-        foreach ($dataprop['results'] as $movie)
+          <div class='MovieListTop owl-carousel Serie'>
+          ";
+        foreach ($dataprop['results'] as $serie)
         {
-            $title = $movie['title'];
-            $poster_path = $movie['poster_path'];
+            $title = $serie['title'];
+            $poster_path = $serie['poster_path'];
             $poster_url = 'https://image.tmdb.org/t/p/w500/' . $poster_path;
-            $movie_name = $movie['name'];
-            $movie_url = 'http://haytex.epizy.com/films/' . $movie_name;
+            $serie_name = $serie['name'];
+            $serie_url = 'http://haytex.epizy.com/films/' . $serie_name;
 
-            $content .= "
+            $page_princ .= "
         <div class='TPostMv'>
             <div class='TPost B'>
-                <a href='http://haytex.epizy.com/films/" . $movie_url . "'>
+                <a href='http://haytex.epizy.com/films/" . $serie_url . "'>
                     <div class='Image'>
                         <figure class='Objf TpMvPlay AAIco-play_arrow'>
                             <img loading='lazy' class='owl-lazy' data-src='" . $poster_url . "' alt='" . $title . "' />
                         </figure>
-                        <span class='Qlty'>FILM</span>
+                        <span class='Qlty'>SERIE</span>
                     </div>
                     <h2 class='Title'>" . $title . "</h2>
                 </a>
             </div>
         </div>";
-        }
-    }
-    $content .= "
+        };
+    
+        $page_princ.="
         </section>
       </div>
     </div>
-            <footer class='Footer'>
+    
+    <footer class='Footer'>
       <div class='Bot'>
         <div class='Container'>
           <p>2022 Copyright © Haytex Tous Droits Réservés</p>
@@ -202,6 +472,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
       </div>
     </footer>
   </div>
+
 
 <div id='disqus_recommendations'></div>
                     <script>
@@ -1979,167 +2250,178 @@ s.src ='https://haytex.disqus.com/recommendations.js'; s.setAttribute('data-time
   ></script>
   <script src='https://s1.bunnycdn.ru/assets/template_1/min/all.js?6379b4a8' async=''></script>
 </body>
+
 ";
-    $content .= '</div>';
-    $content .= '</body>';
-    $content .= '</html>';
-
-    // transformer $lien_page en minuscules
-    $lien_page = strtolower($titreprinc);
-
-    // supprimer les accents et les ponctuations
-    $lien_page = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $lien_page));
-
-    // remplacer les espaces par des underscores
-    $lien_page = str_replace(' ', '_', $lien_page);
-
-    // Enregistrer la page HTML dans un fichier
-    $filename = '../../films/' . $lien_page . '.php';
-    file_put_contents($filename, $content);
-
-    // Rediriger l'utilisateur vers la nouvelle page HTML
-    header("Location: $filename");
-    exit;
-
-        $trailer_url   = 'https://www.youtube.com/watch?v=' . $trailer_key;
-        $release_date  = $data['release_date'];
-        $date          = date('Y', strtotime($release_date));
-        $note = $data['vote_average'];
-		$titreprinc    = $data['title'];
-		$synopsis      = $data['overview'];
-        $duree         = $data['runtime'];
-		$genres        = $data['genres'];
-		$actors        = $data['credits']['cast'];
-        $crew = $data['credits']['crew'];
-        $directors = array();
-		$similar       = $data['similar']['results'];
-		$type          = $data['media_type'];
-		$backdrop_path = $data['backdrop_path'];
-		$poster_path   = $data['poster_path'];
-		// Obtenir les URL des images
-		$backdrop_url  = 'https://image.tmdb.org/t/p/original/' . $backdrop_path;
-		$poster_url    = 'https://image.tmdb.org/t/p/w500/' . $poster_path;
 
 
-    $fiche=" <li>
-   <article class='post dfx fcl movies more-info'>
-   <div class='post-thumbnail or-1'>
-     <figure>
-       <img class='trs' src='". $poster_url ."' loading='lazy' alt='". $titreprinc ."'>
-     </figure>
 
-     <span class='play fa-play'></span>
+    // fermer le fichier
+    fclose($handle); }
+// créer une nouvelle page pour chaque épisode
+$filename = 'page_princ.php';
+$handle = fopen($filename, 'w');
+fwrite($handle, $page_princ);
 
-     <span class='quality'>HD</span>
-   </div>
-   <a href='/films/". $filename ."' class='lnk-blk'>
-     <span class='sr-only'>Regarder</span>
-   </a>
-   <div class='post info' role='tooltip'>
-     <div class='entry-header'>
-       <div class='entry-title'>". $titreprinc ."</div>
-      <div class='entry-meta'>
-        <span class='rating fa-star'><span>". $note ."/10</span></span><span class='year'>". $date ."</span><span class='duration'>". $duree ."min</span><span class='quality'>HD</span>
-      </div>
-    </div>
-    <div class='entry-content'>
-      <p>
-       ". $synopsis ."
-      </p>
-    </div>
-    <div class='details-lst'>
-      <p class='rw sm'>
-                      <span>Réalisation:</span>";
-    foreach ($directors as $director) {
-        $fiche .= '<span class="tt-at"><a href="http://haytex.epizy.com/director/' . urlencode($director) . '" target="_blank">' . $director . '</a>, </span>';
-    }
-    $fiche.=" </p>
-                    <p class='rw sm'>
-                      <span>Genre:</span>";
-    foreach ($genres as $genre) {
-        $fiche .= '<a href="http://haytex.epizy.com/genre/'.$genre['name'].'" target="_blank">'.$genre['name'].'</a>, ';
-    }
-    $fiche .= "</p>
-                    <p class='rw sm'>
-                      <span>Casting principal:</span>";
-    $count = 0;
-    foreach ($actors as $actor) {
-        if ($count >= 3) {
-            break;
+// fermer le fichier
+fclose($handle);
+              
+                echo '<input type="submit" name="submit_links" value="Confirmer les liens" />';
+                echo '</form>';
+
+
+
+
+
+
+//-----------------------------------------------------------PAGE PRINCIPALE----------------------------------------------------------------------//
+
+$episode_numbers = array();
+$image_urls = array();
+foreach ($data['episodes'] as $episode) {
+    $episode_number = $episode['episode_number'];
+    $episode_numbers[] = $episode_number;
+    $episode_name = $episode['name']; 
+    $image_url = "https://image.tmdb.org/t/p/w500" . $episode["still_path"];
+    $image_urls[] = $image_url;
+    $total_seasons = $data['number_of_seasons'];
+    $total_episodes = $data['number_of_episodes'];
+    $note = $data['vote_average'];
+
+  };
+
+
+//-----------------------------------------------------------PAGE PRINCIPALE----------------------------------------------------------------------//
+
+
+
+
+
+
+
+
+
+            } else {
+                echo "Aucun épisode trouvé pour cette série TV.";
+            }
+        } else {
+            echo '<form method="post">';
+            echo '<label for="series_id">ID de la série TV :</label>';
+            echo '<input type="number" name="series_id" id="series_id" placeholder="123456" required />';
+            echo '<label for="season_number">Numéro de la saison :</label>';
+            echo '<input type="number" name="season_number" id="season_number" placeholder="Numéro de la saison" required />';
+            echo '<input type="submit" value="Rechercher la saison" />';
+            echo '</form>';
         }
-        $fiche .= "<a href='http://haytex.epizy.com/casting" . $actor['id'] . "' target='_blank'>" . $actor['name'] . "</a> ";
-        $count++;
-    }
-    if (count($actors) > 3) {
-        $fiche .= "...";
-    };
-    $fiche .= "</p>
-                  </div>
-    <div class='rw sm'>
-      <bouton class='fg1'>
-        <a href='/films/". $filename ."' class='btn blk watch-btn sm fa-play-circle'>Regarder le film</a>
-      </bouton>
-    </div>
-    <div class='post-thumbnail'>
-      <figure>
-        <img class='trs' src='". $poster_url ."' loading='lazy' alt='". $movie_name ."'>
-      </figure>
-    </div>
-  </div>
-</article>
-</li>";
+    ?>
 
-    $movie_id    = $_POST['movie_id'];
-	$uqload      = $_POST['uqload'];
-	$api_key     = '632577cc36b03c82c4167164f4edd49f';
-	$url         = "https://api.themoviedb.org/3/movie/$movie_id?api_key=$api_key&append_to_response=credits&language=fr";
-	// URL de l'API TMDB pour récupérer les propositions
-	$prop        = 'https://api.themoviedb.org/3/movie/' . $movie_id . '/similar?api_key=' . $api_key.'&language=fr';
-	$json        = file_get_contents($url);
-	// Appel de l'API pour récupérer les données JSON
-	$json_data   = file_get_contents($prop);
-	$data        = json_decode($json, true);
-	$dataprop    = json_decode($json_data, true);
 
-// transformer $lien_page en minuscules
-    $lien_page = strtolower($titreprinc);
-
-    // supprimer les accents et les ponctuations
-    $lien_page = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $lien_page));
-
-    // remplacer les espaces par des underscores
-    $lien_page = str_replace(' ', '_', $lien_page);
-
-    // Enregistrer la page HTML dans un fichier
-    $filenom = '../../php/films/' . $lien_page . '.php';
-    file_put_contents($filenom, $fiche);
-    // Inclure le fichier contenant le tableau de films
-    require_once('../../php/films/index.php');
-
-        // Ajouter le nouveau film au tableau de films
-        array_push($films, $fiche . ".php");
-
-        // Trier le tableau de films
-        asort($films);
-
-        // Réécrire le fichier contenant le tableau de films avec les nouvelles données
-        file_put_contents('../../php/films/index.php', '<?php $films = ' . var_export($films, true) . ';');
+<style>
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 50px;
 }
-?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Rechercher un film par ID</title>
-</head>
-<body>
-    <h1>Rechercher un film par ID</h1>
-    <form method="post">
-        <label for="movie_id">ID du film :</label>
-        <input type="text" name="movie_id" id="movie_id" required />
-        <label for="uqload">Lien uqload :</label>
-        <input type="text" name="uqload" id="uqload" required />
-        <button type="submit">Ajouter</button>
-    </form>
-</body>
-</html>
+label {
+  margin: 10px 0;
+  font-size: 18px;
+}
+
+input[type="number"], input[type="text"] {
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+}
+
+input[type="submit"] {
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+  background-color: #007aff;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+input[type="submit"]:hover {
+  background-color: #0055ff;
+}
+
+/* Style pour les titres */
+h1, h2 {
+    font-family: Arial, sans-serif;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 40px;
+    margin-bottom: 20px;
+}
+
+/* Style pour le formulaire d'entrée de l'ID et du numéro de saison */
+form:first-of-type {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+form:first-of-type input[type="number"] {
+    width: 300px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    border: none;
+    box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.2);
+}
+
+/* Style pour la barre entre les deux formulaires */
+hr {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 40px auto;
+    width: 80%;
+}
+
+/* Style pour le formulaire d'entrée des liens uqload */
+form:last-of-type {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+form:last-of-type label {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+form:last-of-type input[type="text"] {
+    width: 500px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    border: none;
+    box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.2);
+}
+
+form:last-of-type input[type="submit"] {
+    background-color: #008CBA;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+form:last-of-type input[type="submit"]:hover {
+    background-color: #006B8F;
+}
+</style>
