@@ -156,28 +156,28 @@ else
 ";
 
         if (isset($data['episodes'])) {
-            $links = array(); // tableau associatif pour stocker les liens pour chaque épisode
+   
 
-            // afficher un formulaire pour chaque épisode
-            echo '<form method="post">';
-            foreach ($data['episodes'] as $index => $episode) {
-    $episode_number = $episode['episode_number'];
-    $episode_name   = $episode['name']; 
-    $image_url      = "https://image.tmdb.org/t/p/w500" . $episode["still_path"];
+    // afficher un formulaire pour chaque épisode
+    echo '<form method="post">';
+    foreach ($data['episodes'] as $index => $episode) {
+        $episode_number = $episode['episode_number'];
+        $episode_name   = $episode['name']; 
+        $image_url      = "https://image.tmdb.org/t/p/w500" . $episode["still_path"];
 
-    // Récupérer la date de l'épisode et la formater
-    $air_date = $episode['air_date'];
-    $formatted_date = date('j M. Y', strtotime($air_date));
-            $liste .="<li><div><div><figure class='fa-play-circle'><img class='brd1 poa' src='$image_url' loading='lazy' alt='Episode $episode_number'></figure><h3 class='title'><span>S$season_number-E$episode_number</span> $episode_name - VF</h3></div><div><span class='date'>$formatted_date</span><a href='http://haytex.epizy.com/series/$lien_page/". $season_number ."x". $episode_number ."vf' class='btn sm rnd'>Regarder l'épisode</a></div></div></li>";
-                
+        // Récupérer la date de l'épisode et la formater
+        $air_date = $episode['air_date'];
+        $formatted_date = date('j M. Y', strtotime($air_date));
 
-                echo "<h2>Episode $episode_number: $episode_name</h2>";
-                echo '<label for="link_' . $episode_number . '">Lien uqload pour cet épisode :</label>';
-                echo '<input type="text" name="links[' . $episode_number . ']" id="link_' . $episode_number . '" placeholder="Entrez le lien uqload pour cet épisode" required/>';
+        $liste .="<li><div><div><figure class='fa-play-circle'><img class='brd1 poa' src='$image_url' loading='lazy' alt='Episode $episode_number'></figure><h3 class='title'><span>S$season_number-E$episode_number</span> $episode_name - VF</h3></div><div><span class='date'>$formatted_date</span><a href='http://haytex.epizy.com/series/$lien_page/". $season_number ."x". $episode_number ."vf' class='btn sm rnd'>Regarder l'épisode</a></div></div></li>";
 
-                $links = $_POST['links'];
-                foreach ($links as $episode_number => $link) {
-$test = "
+        echo "<h2>Episode $episode_number: $episode_name</h2>";
+        echo '<label for="link_' . $episode_number . '">Lien uqload pour l\'épisode ' . $episode_number . ' :</label>';
+echo '<input type="text" name="links[' . $episode_number . ']" id="link_' . $episode_number . '" placeholder="Entrez le lien uqload pour l\'épisode ' . $episode_number . '" required/>';
+
+ $links = $_POST['links'];
+        
+        $episode_page = "
 <html lang=\"en-FR\"><head>
   <meta charset=\"utf-8\">
   <title>$serie_name EP$episode_number S$season_number sur Haytex</title>
@@ -223,7 +223,7 @@ $test = "
 <div class=\"Container\">
 <div class=\"VideoPlayer\">
 <div id=\"VideoOption01\" class=\"Video on\">
-<iframe src=\"https://uqload.co/embed-y2x1vp1v2yxm.html\" allowfullscreen frameborder=\"0\" ></iframe>
+<iframe src=\" . $links[$episode_number] . \" allowfullscreen frameborder=\"0\" ></iframe>
 </div>
 <div class=\"navepi tagcloud\">
 <a href=\"#r\" class=\"prev off\"><span>Episode précédent </span></a>
@@ -285,16 +285,41 @@ $test = "
 <?php include(\"../../php/template/side.php\")?>
 <!--<fin sidebar>-->
 ";
-               
-                
-                
+             // Créer une nouvelle page pour chaque épisode
+        $filename = 'episode_' . $episode_number . '.html';
+        $handle   = fopen($filename, 'w');
+        fwrite($handle, $episode_page);
+    }
 
-// créer une nouvelle page pour chaque épisode
-    $filename = 'episode_' . $episode_number . '.html';
-    $handle   = fopen($filename, 'w');
-    fwrite($handle, $test);
-    };
+// Vérifier si des liens ont été soumis
+if (isset($_POST['links'])) {
+    $links = $_POST['links'];
 
+    // Parcourir les épisodes et les liens
+    foreach ($data['episodes'] as $index => $episode) {
+        $episode_number = $episode['episode_number'];
+
+        // Vérifier si un lien existe pour cet épisode
+        if (isset($links[$episode_number])) {
+            $link = $links[$episode_number];
+
+            // Charger le contenu de la page d'épisode
+            $filename = 'episode_' . $episode_number . '.html';
+            $episode_page = file_get_contents($filename);
+
+            // Remplacer le lien existant par le nouveau lien
+            $episode_page = str_replace('https://uqload.co/embed-y2x1vp1v2yxm.html', $link, $episode_page);
+
+            // Écrire le contenu mis à jour dans la page d'épisode
+            file_put_contents($filename, $episode_page);
+        }
+    }
+}
+
+    echo '<button type="submit">Enregistrer les liens</button>';
+    echo '</form>';
+
+         
 $liste .="</ul></div></section>";
 // créer une nouvelle page pour chaque épisode
                 $filenom =  $lien_page. "-". $season_number .'.php';
@@ -306,6 +331,9 @@ $liste .="</ul></div></section>";
 
 
 
+
+$links = $_POST['links'];
+                foreach ($links as $episode_number => $link) {
 
 
 
