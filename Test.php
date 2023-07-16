@@ -320,7 +320,7 @@ if ($response !== false) {
     
 
 
-        $page_princ.="
+        $page_princ .="
         </section>
       </div>
     </div>
@@ -1327,19 +1327,20 @@ $dossierSerie = '../../series/' . $lien_page;
 
 // Créez le dossier si celui-ci n'existe pas déjà
 if (!is_dir($dossierSerie)) {
-    chmod($dossierSerie, 0777);
     mkdir($dossierSerie, 0777, true); // Le mode 0777 assure les permissions maximales, mais vous pouvez ajuster les permissions selon vos besoins
 }
 
 // Créez une nouvelle page pour chaque épisode dans le dossier de la série
-$filename = '../../series/' . $lien_page . '/index.php';
+$filename = $dossierSerie . '/index.php';
 $handle = fopen($filename, 'w');
 fwrite($handle, $page_princ);
 
 // Fermez le fichier
 fclose($handle);
-              
-};                
+   
+}; 
+
+
 //-----------------------------------------------------------PAGE PRINCIPALE----------------------------------------------------------------------//
 
 $episode_numbers = array();
@@ -2675,6 +2676,9 @@ if (!in_array($lien_page . ".php", $series)) {
                 echo '<input type="submit"  name="confirm" value="Confirmer la création de la saison" style="text-align: center;"/>';
     echo '</form>';
 //-----------------------------------------------------------PAGE PRINCIPALE----------------------------------------------------------------------//
+
+
+
 
 // Replace with your Discord webhook URL
 $webhookUrl = " ";
