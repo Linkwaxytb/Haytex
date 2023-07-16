@@ -97,14 +97,14 @@ else
         $api_key     = '632577cc36b03c82c4167164f4edd49f';
         $url_princ   = "https://api.themoviedb.org/3/tv/$series_id?api_key=$api_key&append_to_response=credits&language=fr";
         $url         = "https://api.themoviedb.org/3/tv/$series_id/season/$season_number?api_key=$api_key&language=fr";
-        
+        $note = $serie_data['vote_average'];
         $json_princ  = file_get_contents($url_princ);
         $json        = file_get_contents($url);
         $data        = json_decode($json, true);
         $serie_data  = json_decode($json_princ, true);
         $saison = 1;
        
-        $video_url   = "https://api.themoviedb.org/3/tv/$series_id/videos?api_key=$api_key&language=fr";
+        
         $serie_name  = $serie_data['name']; // récupérer le nom de la série
         $serie_overview = $serie_data['overview']; // synopsis de la série
         $serie_total_episodes = $serie_data['number_of_episodes']; // nombre total d'épisodes
@@ -142,18 +142,18 @@ else
 		$trailer_url   = 'https://www.youtube.com/watch?v=' . $trailer_key;
         $release_date  = $data['release_date'];
         $date          = date('Y', strtotime($release_date));
-
+        $url_serie = 'http://haytex.epizy.com/series/' . $lien_page;
         // construction de l'URL de l'image de présentation et de l'image de fond
         $serie_poster_url = 'https://image.tmdb.org/t/p/w500' . $serie_poster_path;
         $serie_backdrop_url = 'https://image.tmdb.org/t/p/w1280' . $serie_backdrop_path;
         $season_number = $_POST['season_number'];
 
 
-
-if ($saison === 1) {
+if ($saison_number === 1) {
     
     $page_princ = "
-                
+<?php require '../../usersc/instructions1.php'; ?>   
+
 <html lang='en-FR'><head>
   <meta charset='utf-8'>
   <title>$serie_name sélection épisode sur Haytex</title>
@@ -254,7 +254,7 @@ $page_princ .="<a href='$trailer_url' onclick='window.open ('$trailer_url', 'You
  <div class='TpRwCont '>
 
 <!--<épisodes>-->
-<?php include('$lien_page-$season_number.php')?>
+<?php include('../../php/series/episodes/$lien_page-$season_number.php')?>
 <!--<fin épisodes>-->
 
 <section>
@@ -1322,15 +1322,24 @@ s.src ='https://haytex.disqus.com/recommendations.js'; s.setAttribute('data-time
 </body></html>
 ";
 
+// Créez le chemin vers le dossier de la série
+$dossierSerie = '../../series/' . $lien_page;
 
+// Créez le dossier si celui-ci n'existe pas déjà
+if (!is_dir($dossierSerie)) {
+    chmod($dossierSerie, 0777);
+    mkdir($dossierSerie, 0777, true); // Le mode 0777 assure les permissions maximales, mais vous pouvez ajuster les permissions selon vos besoins
+}
 
-// créer une nouvelle page pour chaque épisode
-$filename = '../../series/'. $lien_page .'/index.php';
-file_put_contents($filename, $page_princ);
+// Créez une nouvelle page pour chaque épisode dans le dossier de la série
+$filename = '../../series/' . $lien_page . '/index.php';
+$handle = fopen($filename, 'w');
+fwrite($handle, $page_princ);
 
-};
+// Fermez le fichier
+fclose($handle);
               
-                
+};                
 //-----------------------------------------------------------PAGE PRINCIPALE----------------------------------------------------------------------//
 
 $episode_numbers = array();
@@ -1379,6 +1388,7 @@ foreach ($data['episodes'] as $episode) {
  $links = $_POST['links'];
         
         $episode_page = "
+        <?php require '../../usersc/instructions1.php'; ?>  
 <html lang=\"en-FR\"><head>
   <meta charset=\"utf-8\">
   <title>$serie_name EP$episode_number S$season_number sur Haytex</title>
@@ -2543,32 +2553,191 @@ s.src ='https://haytex.disqus.com/recommendations.js'; s.setAttribute('data-time
 
 </body></html>
 ";
+
              // Créer une nouvelle page pour chaque épisode
-        $filename = '../../series/'. $lien_page .'/'. $season_numer .'x'. $episode_number.'.php';
-        file_put_contents($filename, $episode_page);
+        $filename = '../../series/'. $lien_page .'/ '. $season_number .'x'. $episode_number .'.php';
+        $handle   = fopen($filename, 'w');
+        fwrite($handle, $episode_page);
     }
 $liste .= "</ul></div></section>"; 
 
+
+$fiche = "<li>
+   <article class='post dfx fcl movies more-info'>
+   <div class='post-thumbnail or-1'>
+     <figure>
+       <img class='trs' src='$serie_poster_url' loading='lazy' alt='$serie_name'>
+     </figure>
+
+     <span class='play fa-play'></span>
+
+     <span class='quality'>HD</span>
+   </div>
+   <a href='/series/$lien_page' class='lnk-blk'>
+     <span class='sr-only'>Regarder</span>
+   </a>
+   <div class='post info' role='tooltip'>
+     <div class='entry-header'>
+       <div class='entry-title'>$serie_name</div>
+      <div class='entry-meta'>
+        <span class='rating fa-star'><span>$note/10</span></span><span class='year'>$date</span><span class='duration'>$serie_total_seasons saisons</span><span class='quality'>HD</span>
+      </div>
+    </div>
+    <div class='entry-content'>
+      <p>
+       $serie_overview
+      </p>
+    </div>
+    <div class='details-lst'>
+      <p class='rw sm'>";          
+//Réalisateurs
+        foreach ($crew as $member) {
+            if ($member['job'] == 'Director') {
+                $directors[] = $member['name'];
+            }
+        }
+        if (!empty($directors)) {
+            $fiche .= "<p class='Director'><span>Réalisation:</span> ";
+            foreach ($directors as $director) {
+                $fiche .= "<a href='http://haytex.epizy.com/director/" . urlencode($director) . "' target='_blank'>" . $director . "</a>, ";
+            }
+            $fiche = rtrim($fiche, ', ');
+            $fiche .= "</p>";
+        }
+        //Acteurs
+        $fiche .= "<p class='Cast Cast-sh oh'>
+        <span>Casting principal:</span> ";
+        $count = 0;
+    foreach ($actors as $actor) {
+        if ($count >= 3) {
+            break;
+        }
+        $fiche .= "<a href='http://haytex.epizy.com/casting/" . $actor['id'] . "' target='_blank'>" . $actor['name'] . "</a> ";
+        $count++;
+    }
+    if (count($actors) > 3) {
+        $fiche .= "...";
+    };
+        $fiche = rtrim($fiche, ', ');
+        $fiche .= "</p>";
+        $fiche .= '<p class="Genre">
+                <span>Genres:</span> ';
+        foreach ($genres as $genre) {
+            $fiche .= "<a href='http://haytex.epizy.com/genre/".$genre['name']."' target='_blank'>".$genre['name']."</a>, ";
+        }
+        $fiche     = rtrim($fiche, ', ');
+        $fiche .= "</p>";
+                  $fiche .= "</div>
+    <div class='rw sm'>
+      <bouton class='fg1'>
+        <a href='/series/$lien_page' class='btn blk watch-btn sm fa-play-circle'>Regarder la série</a>
+      </bouton>
+    </div>
+    <div class='post-thumbnail'>
+      <figure>
+        <img class='trs' src='$serie_poster_url' loading='lazy' alt='$serie_name'>
+      </figure>
+    </div>
+  </div>
+</article>
+</li>
+";
+
+// Enregistrer la page HTML dans un fichier
+    $filenom = '../../php/series/' . $lien_page . '.php';
+    file_put_contents($filenom, $fiche);
+    
+    // Inclure le fichier contenant le tableau de films
+    require_once('../../php/series/index.php');
+
+        // Vérifier si le film existe déjà dans le tableau
+if (!in_array($lien_page . ".php", $series)) {
+    // Ajouter le nouveau film au tableau de films
+    array_push($series, $lien_page . ".php");
+
+    // Trier le tableau de films
+    asort($series);
+
+    // Réécrire le fichier contenant le tableau de films avec les nouvelles données
+    file_put_contents('../../php/series/index.php', '<?php $series = ' . var_export($series, true) . ';');
+};
+
 // créer une nouvelle page pour chaque épisode
-                $filenom =  $lien_page. "-". $season_number .'.php';
-                file_put_contents($filenom, $liste);
+                $filenom =  '../../php/series/episodes/' .$lien_page. "-". $season_number .'.php';
+                $handle   = fopen($filenom, 'w');
+                fwrite($handle, $liste);
 
                 // fermer le fichier
                 fclose($handle);
 
-   echo '<h1>Créer les épisodes de la saison '. $season_number .' pour la série '. $serie_name .' ? Vous devrez ajouter les liens manuellement.</h1>';
-                echo '<input type="submit"  value="Confirmer la création de la saison" style="text-align: center;"/>';
-    echo '</form>';
 
-         
+   echo '<h1>Créer les épisodes de la saison '. $season_number .' pour la série '. $serie_name .' ? Vous devrez ajouter les liens manuellement.</h1>';
+                echo '<input type="submit"  name="confirm" value="Confirmer la création de la saison" style="text-align: center;"/>';
+    echo '</form>';
 //-----------------------------------------------------------PAGE PRINCIPALE----------------------------------------------------------------------//
 
+// Replace with your Discord webhook URL
+$webhookUrl = " ";
 
+// Inclure le fichier contenant le tableau de séries
+require_once('../../php/series/index.php');
 
+// Vérifier si la série existe déjà dans le tableau
 
+// Construct the payload data
+$payload = [
+  "content" => "<@&1075053972706045962>",
+  "embeds" => [
+    [
+      "title" => "La saison ". $season_number ." de la série " . $serie_name . " vient d'être ajoutée au site, les liens des embed ainsi que les mod de liaisons de page seront corrigées d'ici peu",
+      "thumbnail" => [
+        "url" => $serie_poster_url
+      ],
+      "fields" => [
+        [
+          "name" => "Nombre total de saisons",
+          "value" => $serie_total_seasons
+        ],
+        [
+          "name" => "Nombre total d'épisodes",
+          "value" => $serie_total_episodes
+        ],
+        [
+          "name" => "Note",
+          "value" => $note . "/10"
+        ],
+        [
+          "name" => "Réalisation",
+          "value" => implode(", ", $directors)
+        ],
+        [
+          "name" => "Casting principal",
+          "value" => implode(", ", array_column(array_slice($actors, 0, 5), 'name'))
+        ],
+        [
+          "name" => "Genres",
+          "value" => implode(", ", array_column($genres, 'name'))
+        ],
+        [
+          "name" => "Lien de la série",
+          "value" => $url_serie
+        ],
+      ],
+      "image" => [
+        "url" => $serie_backdrop_url
+      ],
+      "color" => 0x00FF00,
+    ]
+  ],
+];
 
-
-
+// Send the payload data to the Discord webhook
+$ch = curl_init($webhookUrl);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_exec($ch);
+curl_close($ch);
 
 
             } else {
