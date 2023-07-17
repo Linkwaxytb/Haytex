@@ -102,9 +102,6 @@ else
         $json        = file_get_contents($url);
         $data        = json_decode($json, true);
         $serie_data  = json_decode($json_princ, true);
-        $saison = 1;
-       
-        
         $serie_name  = $serie_data['name']; // récupérer le nom de la série
         $serie_overview = $serie_data['overview']; // synopsis de la série
         $serie_total_episodes = $serie_data['number_of_episodes']; // nombre total d'épisodes
@@ -117,7 +114,7 @@ else
 		$actors        = $serie_data['credits']['cast'];
         $crew = $serie_data['credits']['crew'];
         $directors = array();
-        		$video_url   = "https://api.themoviedb.org/3/tv/$serie_id/videos?api_key=$api_key&language=fr";
+        $video_url = "https://api.themoviedb.org/3/tv/$series_id/videos?api_key=$api_key&language=fr";
         $json_data   = file_get_contents($prop);
 		$json_video  = file_get_contents($video_url);
 		$data_video  = json_decode($json_video, true);
@@ -131,15 +128,13 @@ else
 				break;
 			}
 		}
-         // transformer $lien_page en minuscules
+		$trailer_url   = 'https://www.youtube.com/watch?v=' . $trailer_key;
+                 // transformer $lien_page en minuscules
     $lien_page = strtolower($serie_name);
-
     // supprimer les accents et les ponctuations
     $lien_page = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $lien_page));
-
     // remplacer les espaces par des underscores
     $lien_page = str_replace(' ', '_', $lien_page);
-		$trailer_url   = 'https://www.youtube.com/watch?v=' . $trailer_key;
         $release_date  = $data['release_date'];
         $date          = date('Y', strtotime($release_date));
         $url_serie = 'http://haytex.epizy.com/series/' . $lien_page;
@@ -149,8 +144,6 @@ else
         $season_number = $_POST['season_number'];
 
 
-if ($saison_number === 1) {
-    
     $page_princ = "
 <?php require '../../usersc/instructions1.php'; ?>   
 
@@ -241,7 +234,7 @@ if ($saison_number === 1) {
 		$page_princ     = rtrim($page_princ, ', ');
         $page_princ .= "</p>";
 
-$page_princ .="<a href='$trailer_url' onclick='window.open ('$trailer_url', 'Youtube', 'toolbar=0, status=0, width=650, height=450');' id='watch-trailer' class='Button TPlay AAIco-play_circle_outline'><strong>Bande-Annonce</strong></a>
+$page_princ .="<a href='$trailer_url' onclick=\"window.open\" ('$trailer_url', 'Youtube', 'toolbar=0, status=0, width=650, height=450'); id='watch-trailer' class='Button TPlay AAIco-play_circle_outline'><strong>Bande-Annonce</strong></a>
 </div>
 <div class='Image'>
 <figure class='Objf'><img loading='lazy' class='TPostBg' src='$serie_backdrop_url' alt='Background'></figure>
@@ -1320,27 +1313,21 @@ s.src ='https://haytex.disqus.com/recommendations.js'; s.setAttribute('data-time
 </script>
 
 </body></html>
-";
+"; 
 
-// Créez le chemin vers le dossier de la série
-$dossierSerie = '../../series/' . $lien_page;
-
-// Créez le dossier si celui-ci n'existe pas déjà
+// Créer le dossier
+$dossierSerie = '../../series/'. $lien_page .'/' ;
 if (!is_dir($dossierSerie)) {
-    mkdir($dossierSerie, 0777, true); // Le mode 0777 assure les permissions maximales, mais vous pouvez ajuster les permissions selon vos besoins
+    mkdir($dossierSerie, 0777, true);
 }
 
-// Créez une nouvelle page pour chaque épisode dans le dossier de la série
-$filename = $dossierSerie . '/index.php';
-$handle = fopen($filename, 'w');
-fwrite($handle, $page_princ);
+// Créer le fichier index.php
+$filename = $dossierSerie . 'index.php';
+$handle   = fopen($filename, 'w');
+                fwrite($handle, $page_princ);
 
-// Fermez le fichier
-fclose($handle);
-   
-}; 
-
-
+                // fermer le fichier
+                fclose($handle);
 //-----------------------------------------------------------PAGE PRINCIPALE----------------------------------------------------------------------//
 
 $episode_numbers = array();
@@ -1368,6 +1355,7 @@ foreach ($data['episodes'] as $episode) {
 
  if (isset($data['episodes'])) {
    
+
 
     // afficher un formulaire pour chaque épisode
     echo '<form method="post">';
