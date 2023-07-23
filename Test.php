@@ -91,6 +91,7 @@ else
 	}
 ?>
 <?php
+    require_once $abs_us_root . $us_url_root . 'users/includes/template/prep.php';
     if (isset($_POST['series_id']) && isset($_POST['season_number'])) {
         $series_id = $_POST['series_id'];
         $season_number = $_POST['season_number'];
@@ -277,7 +278,7 @@ $page_princ .="<a
           
         $url_prop = "https://api.themoviedb.org/3/tv/$series_id/recommendations?api_key=$api_key&language=fr";
         // Effectuer la requête à l'API
-$response = file_get_contents($url_prop);
+        $response = file_get_contents($url_prop);
 
 // Vérifier si la requête a réussi
 if ($response !== false) {
@@ -294,15 +295,15 @@ if ($response !== false) {
     $serie_url = strtolower($title_prop);
 
     // supprimer les accents et les ponctuations
-    $serie_url = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', serie_url));
+    $serie_url = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $serie_url));
 
     // remplacer les espaces par des underscores
-    $serie_url = str_replace(' ', '_', serie_url);
+    $serie_url = str_replace(' ', '_', $serie_url);
 
             $page_princ .= "
         <div class='TPostMv'>
             <div class='TPost B'>
-                <a href='http://haytex.epizy.com/films/" . $serie_url . "'>
+                <a href='http://haytex.epizy.com/series/" . $serie_url . "'>
                     <div class='Image'>
                         <figure class='Objf TpMvPlay AAIco-play_arrow'>
                             <img loading='lazy' class='owl-lazy' data-src='" . $imageUrl_prop . "' alt='" . $title_prop . "' />
@@ -1434,7 +1435,13 @@ foreach ($data['episodes'] as $episode) {
                     <li>
                         <button data-embed='LIENNNNN' class='Button sgty'>
                             <span class='nmopt'>01</span>
-                            <span>VOSTFR <span>HD • PLATEFORME</span></span>
+                            <span>VOSTFR <span>HD • LECTEUR 1</span></span>
+                        </button>
+                    </li>
+                    <li>
+                        <button data-embed='LIENNNNN' class='Button sgty'>
+                            <span class='nmopt'>02</span>
+                            <span>VOSTFR <span>HD • LECTEUR 2</span></span>
                         </button>
                     </li>
                 </ul>
@@ -1448,13 +1455,13 @@ foreach ($data['episodes'] as $episode) {
                     <li>
                         <button data-embed='LIENNNNN' class='Button sgty on'>
                             <span class='nmopt'>01</span>
-                            <span>VF <span>HD • PLATEFORME</span></span>
+                            <span>VF <span>HD • LECTEUR 1</span></span>
                         </button>
                     </li>
                     <li>
                         <button data-embed='LIENNNN' class='Button sgty'>
                             <span class='nmopt'>02</span>
-                            <span>VF <span>HD • PLATEFORME</span></span>
+                            <span>VF <span>HD • LECTEUR 2</span></span>
                         </button>
                     </li>
                 </ul>
@@ -1462,7 +1469,7 @@ foreach ($data['episodes'] as $episode) {
         </div>
         <div class='VideoPlayer'>
             <div id='VideoOption01' class='Video on' style=''>
-                <iframe id='myIframe' src='https://doodstream.com/e/0rjen8yz8jwq' allowfullscreen='' frameborder='0'></iframe>
+                <iframe id='myIframe' src='LIENNNN' allowfullscreen='' frameborder='0'></iframe>
             </div>
             <span class='BtnLight AAIco-lightbulb_outline lgtbx-lnk'></span>
             <span class='lgtbx'></span>
@@ -1592,10 +1599,10 @@ if ($response !== false) {
     $serie_url = strtolower($title_prop);
 
     // supprimer les accents et les ponctuations
-    $serie_url = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', serie_url));
+    $serie_url = preg_replace('/[\p{P}\p{S}]/u', '', iconv('UTF-8', 'ASCII//TRANSLIT', $serie_url));
 
     // remplacer les espaces par des underscores
-    $serie_url = str_replace(' ', '_', serie_url);
+    $serie_url = str_replace(' ', '_', $serie_url);
 
             $episode_page .= "
         <div class='TPostMv'>
@@ -2731,7 +2738,7 @@ if (!in_array($lien_page . ".php", $series)) {
                 fclose($handle);
 
 
-   echo '<h1>Créer les épisodes de la saison '. $season_number .' pour la série '. $serie_name .' ? Vous devrez ajouter les liens manuellement.</h1>';
+   echo '<h1>Créer les épisodes de la saison '. $season_number .' de la série '. $serie_name .' ? Vous devrez ajouter les liens manuellement.</h1>';
                 echo '<input type="submit"  name="confirm" value="Confirmer la création de la saison" style="text-align: center;"/>';
     echo '</form>';
 //-----------------------------------------------------------PAGE PRINCIPALE----------------------------------------------------------------------//
@@ -2740,7 +2747,7 @@ if (!in_array($lien_page . ".php", $series)) {
 
 
 // Replace with your Discord webhook URL
-$webhookUrl = " ";
+$webhookUrl = "https://discord.com/api/webhooks/1130116660263661658/KDm-MecxdH1N5RIXdzVAR1JYsqZBj-ZJOzqKqjThXH8qEJVBxDiJFeEOkFLoWuWAkiMj" ;
 
 // Inclure le fichier contenant le tableau de séries
 require_once('../../php/series/index.php');
@@ -2749,10 +2756,10 @@ require_once('../../php/series/index.php');
 
 // Construct the payload data
 $payload = [
-  "content" => "<@&1075053972706045962>",
+  "content" => "<@&1075053973846884442>",
   "embeds" => [
     [
-      "title" => "La saison ". $season_number ." de la série " . $serie_name . " vient d'être ajoutée au site, les liens des embed ainsi que les mod de liaisons de page seront corrigées d'ici peu",
+      "title" => "La saison ". $season_number ." de la série " . $serie_name . " vient d'être ajoutée au site, les liens des embed ainsi que les modes de liaisons de page seront corrigées d'ici peu",
       "thumbnail" => [
         "url" => $serie_poster_url
       ],
@@ -2804,11 +2811,11 @@ curl_close($ch);
 
 
             } else {
-                echo "Aucun épisode trouvé pour cette série TV.";
+                echo "Aucun épisode trouvé pour cette série.";
             }
         } else {
             echo '<form method="post">';
-            echo '<label for="series_id">ID de la série TV :</label>';
+            echo '<label for="series_id">ID de la série :</label>';
             echo '<input type="number" name="series_id" id="series_id" placeholder="123456" required />';
             echo '<label for="season_number">Numéro de la saison :</label>';
             echo '<input type="number" name="season_number" id="season_number" placeholder="Numéro de la saison" required />';
